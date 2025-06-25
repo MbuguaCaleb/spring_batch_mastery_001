@@ -3,6 +3,9 @@ package com.springbatch.spring_batch_mastery_001.config;
 import com.springbatch.spring_batch_mastery_001.batch.*;
 import com.springbatch.spring_batch_mastery_001.entity.BatchDetailsEntity;
 import com.springbatch.spring_batch_mastery_001.entity.BookEntity;
+import com.springbatch.spring_batch_mastery_001.repository.MerchantCategoryCodesRepository;
+import com.springbatch.spring_batch_mastery_001.repository.MerchantOnBoardingRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.StepScope;
@@ -26,7 +29,12 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 
 @Configuration
+@RequiredArgsConstructor
 public class BatchConfig {
+
+    private final MerchantCategoryCodesRepository merchantCategoryCodesRepository;
+
+    private final MerchantOnBoardingRepository merchantOnBoardingRepository;
     //we shall create a Job to read a file
     //Inside the Job, we shall create the Steps (Reader, Writer, Processor
 
@@ -98,7 +106,8 @@ public class BatchConfig {
     @StepScope
     public ItemProcessor<BatchDetailsEntity,BatchDetailsEntity> cyberSourceProcessor(){
         CompositeItemProcessor<BatchDetailsEntity,BatchDetailsEntity> processor = new CompositeItemProcessor<>();
-        processor.setDelegates(List.of(new CyberSourceProcessor(), new CyberSourceProcessorNetAmount()));
+        processor.setDelegates(List.of(new CyberSourceEvaluatePercentProcessor(),
+                new CyberSourceProcessorNetAmount()));
         return processor;
     }
 

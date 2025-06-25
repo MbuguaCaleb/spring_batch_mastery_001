@@ -7,6 +7,7 @@ import org.springframework.batch.item.ItemProcessor;
 @Slf4j
 public class CyberSourceProcessorNetAmount implements ItemProcessor<BatchDetailsEntity, BatchDetailsEntity> {
 
+
     @Override
     public BatchDetailsEntity process(BatchDetailsEntity item) throws Exception {
        log.info("Process author: {}", item);
