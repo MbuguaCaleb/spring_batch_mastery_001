@@ -62,3 +62,12 @@ Spring Batch Project One
 3.How to schedule spring batch execution.
 
 ```
+
+
+```
+To start a Spring Batch Job via a rest, you need to hook your reader to
+the GET Call,
+
+So that when you call the request, you start the process
+
+```

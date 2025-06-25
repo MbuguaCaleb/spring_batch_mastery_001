@@ -1,8 +1,7 @@
 package com.springbatch.spring_batch_mastery_001.config;
 
-import com.springbatch.spring_batch_mastery_001.batch.BookAuthorProcessor;
-import com.springbatch.spring_batch_mastery_001.batch.BookTitleProcessor;
-import com.springbatch.spring_batch_mastery_001.batch.BookWriter;
+import com.springbatch.spring_batch_mastery_001.batch.*;
+import com.springbatch.spring_batch_mastery_001.entity.BatchDetailsEntity;
 import com.springbatch.spring_batch_mastery_001.entity.BookEntity;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -12,6 +11,7 @@ import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.ItemWriter;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
@@ -21,6 +21,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
@@ -31,25 +32,43 @@ public class BatchConfig {
 
     //we need the jobRepository & transactionManager as dependencies for our steps
     //A job takes in a Step
+//    @Bean
+//    public Job bookReaderJob(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+//        return new JobBuilder("bookReadJob", jobRepository)
+//                .incrementer(new RunIdIncrementer())
+//                .start(chunkStep(jobRepository, transactionManager))
+//                .build();
+//    }
+
     @Bean
-    public Job bookReaderJob(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
-        return new JobBuilder("bookReadJob", jobRepository)
+    public Job cyberSourceReaderJob(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new JobBuilder("cyberSourceReadJob", jobRepository)
                 .incrementer(new RunIdIncrementer())
-                .start(chunkStep(jobRepository, transactionManager))
+                .start(chunkCyberSourceStep(jobRepository, transactionManager))
                 .build();
     }
 
-    //the chunk step has the reader,processor and writer
+    //the chunk step has the csvReader,processor and writer
     //I will be reading my CSV up to 10 records
     //Then i process the 10 records
     //After processing is done, then i write
+//    @Bean
+//    public Step chunkStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+//        return new StepBuilder("bookReaderStep", jobRepository).<BookEntity, BookEntity>
+//                        chunk(10, transactionManager)
+//                .reader(csvReader())
+//                .processor(processor())
+//                .writer(writer())
+//                .build();
+//    }
+
     @Bean
-    public Step chunkStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
-        return new StepBuilder("bookReaderStep", jobRepository).<BookEntity, BookEntity>
+    public Step chunkCyberSourceStep(JobRepository jobRepository, PlatformTransactionManager transactionManager) {
+        return new StepBuilder("cyberSourceReaderStep", jobRepository).<BatchDetailsEntity, BatchDetailsEntity>
                         chunk(10, transactionManager)
-                .reader(reader())
-                .processor(processor())
-                .writer(writer())
+                .reader(cyberSourceReader())
+                .processor(cyberSourceProcessor())
+                .writer(cyberSourceWriter())
                 .build();
     }
 
@@ -60,6 +79,13 @@ public class BatchConfig {
         return new BookWriter();
     }
 
+
+    @StepScope
+    @Bean
+    public ItemWriter<BatchDetailsEntity> cyberSourceWriter (){
+        return new CyberSourceWriter();
+    }
+
     @Bean
     @StepScope
     public ItemProcessor<BookEntity,BookEntity> processor(){
@@ -68,11 +94,19 @@ public class BatchConfig {
         return processor;
     }
 
-    //Creating my reader config
+    @Bean
+    @StepScope
+    public ItemProcessor<BatchDetailsEntity,BatchDetailsEntity> cyberSourceProcessor(){
+        CompositeItemProcessor<BatchDetailsEntity,BatchDetailsEntity> processor = new CompositeItemProcessor<>();
+        processor.setDelegates(List.of(new CyberSourceProcessor(), new CyberSourceProcessorNetAmount()));
+        return processor;
+    }
+
+    //Creating my csvReader config
     //StepScope, means that this is a Bean in the scope of the Step
     @Bean
     @StepScope
-    public FlatFileItemReader<BookEntity> reader(){
+    public FlatFileItemReader<BookEntity> csvReader(){
         return new FlatFileItemReaderBuilder<BookEntity>()
                 .name("bookReader")
                 .resource(new ClassPathResource("book_data.csv"))
@@ -83,5 +117,29 @@ public class BatchConfig {
                 }})
                 .build();
     }
+
+    @Bean
+    @StepScope
+    public FlatFileItemReader<BatchDetailsEntity>cyberSourceReader(){
+        return new FlatFileItemReaderBuilder<BatchDetailsEntity>()
+                .name("cyberSourceReport")
+                .resource(new ClassPathResource("Download a Report_1750857100028.csv"))
+                .linesToSkip(2)
+                .delimited()
+                .names(new String[]{"batch_id","merchant_id","batch_date","request_id","merchant_ref_number","TransactionReferenceNumber","payment_type","currency","amount","ics_applications","status","transaction_date"
+                })
+                .fieldSetMapper(new BeanWrapperFieldSetMapper<>(){{
+                    setTargetType(BatchDetailsEntity.class);
+                }})
+                .build();
+    }
+
+    @Bean
+    @StepScope
+    public ItemReader<BookEntity> restBookReader(){
+        return new RestBookReader("http://localhost:8080/api/v1/books", new RestTemplate());
+    }
+
+
 
 }
