@@ -13,7 +13,19 @@ Batch processing Use Cases
 
 ```
 
+**Set Up of a Spring Batch Job**
 
+```
+There are tow ways for setup of a spring batch Job
+
+(a)ChunkStep ->Spring reads your data in chunks
+In the ChunkStep, we have the reader, processor,writer
+
+(b)TaskLet
+
+We just have execute, and it repeats a task until its finished
+or until exception or until null is returned
+```
 *FEATURES*
 
 ```
@@ -69,5 +81,25 @@ To start a Spring Batch Job via a rest, you need to hook your reader to
 the GET Call,
 
 So that when you call the request, you start the process
+
+```
+
+**Scheduling a Batch Job**
+
+```
+
+Step One
+(We disable the Batch Job from executing at startUp)
+
+spring.batch.job.enabled=false
+To be able to restart a scheduled Job,it needs to be launched with some unique params
+otherwise Spring will not be able to distinguish it.
+
+```
+
+**Chaining Jobs**
+
+```
+We can chain many Jobs by using next
 
 ```
